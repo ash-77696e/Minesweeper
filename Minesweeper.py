@@ -54,6 +54,18 @@ def generate_board(dimension, mines):
     
     return board
 
+def markSafe(agent, board, safeList, all_moves, knowledge_base):
+    while len(safeList) > 0:
+        currSafe = safeList.pop()
+        x, y = currSafe
+        agent[x][y] = board[x][y]
+        knowledge_base.append((currSafe, agent[x][y], 
+        get_safe_neighbors(agent, currSafe), 
+        get_mine_neighbors(agent, currSafe), get_hidden_neighbors(agent, currSafe)))
+        all_moves.remove(currSafe)
+
+
+
 def basic_agent(board):
     agent = np.zeros((board.shape[0], board.shape[0]), int)
     dimension = board.shape[0]
@@ -63,7 +75,6 @@ def basic_agent(board):
 
     all_moves = []
     knowledge_base = []
-    safeList = []
 
     for x in range(agent.shape[0]):
         for y in range(agent.shape[0]):
@@ -73,13 +84,10 @@ def basic_agent(board):
         knowledge_base = [(kb[0], kb[1], get_safe_neighbors(agent, kb[0]), 
         get_mine_neighbors(agent, kb[0]), get_hidden_neighbors(agent, kb[0])) for kb in knowledge_base]
 
+        '''
         # if there is something in our safe list, pick it as your move and move on
         if len(safeList) > 0:
-            currSafe = safeList.pop()
-
-            if currSafe not in all_moves:
-                continue
-            
+            currSafe = safeList.pop() 
             x, y = currSafe
 
             agent[x][y] = board[x][y]
@@ -91,6 +99,7 @@ def basic_agent(board):
             all_moves.remove(currSafe)
             
             continue
+        '''
 
         if len(knowledge_base) > 0:
             removedItem = None
@@ -106,10 +115,9 @@ def basic_agent(board):
                 if clue - mines == hidden:
                     newMines = get_all_hidden_neighbors(agent, coord)
                     for coord in newMines:
-                        if coord in all_moves:
-                            all_moves.remove(coord)
-                            agent[coord[0]][coord[1]] = 9
-                            defused += 1
+                        all_moves.remove(coord)
+                        agent[coord[0]][coord[1]] = 9
+                        defused += 1
                     
                     remove = True
                     removedItem = kb
@@ -118,8 +126,8 @@ def basic_agent(board):
                 # corner cell
                 if (x == 0 and y == 0) or (x == 0 and y == dimension - 1) or (x == dimension - 1 and y == 0) or (x == dimension - 1 and y == dimension - 1):
                     if (3 - clue) - safe == hidden:
-                        newSafe = get_all_hidden_neighbors(agent, coord)
-                        safeList += newSafe
+                        safeList = get_all_hidden_neighbors(agent, coord)
+                        markSafe(agent, board, safeList, all_moves, knowledge_base)
                         remove = True
                         removedItem = kb
                         break
@@ -127,16 +135,16 @@ def basic_agent(board):
                 # border cell
                 elif x == 0 or y == 0:
                     if (5 - clue) - safe == hidden:
-                        newSafe = get_all_hidden_neighbors(agent, coord)
-                        safeList += newSafe
+                        safeList = get_all_hidden_neighbors(agent, coord)
+                        markSafe(agent, board, safeList, all_moves, knowledge_base)
                         remove = True
                         removedItem = kb
                         break
 
                 else:
                     if (8 - clue) - safe == hidden:
-                        newSafe = get_all_hidden_neighbors(agent, coord)
-                        safeList += newSafe
+                        safeList = get_all_hidden_neighbors(agent, coord)
+                        markSafe(agent, board, safeList, all_moves, knowledge_base)
                         remove = True
                         removedItem = kb
                         break
@@ -306,5 +314,5 @@ def get_hidden_neighbors(agent, coord):
 
     return hidden
 
-board = generate_board(16, 90)
+board = generate_board(16, 40)
 basic_agent(board)
