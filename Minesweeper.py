@@ -63,16 +63,19 @@ def basic_agent(board):
 
     all_moves = []
     knowledge_base = []
-    knownSafe = []
+    safeList = []
 
     for x in range(agent.shape[0]):
         for y in range(agent.shape[0]):
             all_moves.append((x, y))
 
     while len(all_moves) > 0:
-        
-        if len(knownSafe) > 0:
-            currSafe = knownSafe.pop()
+        knowledge_base = [(kb[0], kb[1], get_safe_neighbors(agent, kb[0]), 
+        get_mine_neighbors(agent, kb[0]), get_hidden_neighbors(agent, kb[0])) for kb in knowledge_base]
+
+        # if there is something in our safe list, pick it as your move and move on
+        if len(safeList) > 0:
+            currSafe = safeList.pop()
 
             if currSafe not in all_moves:
                 continue
@@ -90,10 +93,6 @@ def basic_agent(board):
             continue
 
         if len(knowledge_base) > 0:
-            # UPDATE KNOWLEDGE BASE
-            knowledge_base = [(kb[0], kb[1], get_safe_neighbors(agent, kb[0]), 
-            get_mine_neighbors(agent, kb[0]), get_hidden_neighbors(agent, kb[0])) for kb in knowledge_base]
-            
             removedItem = None
             remove = False
 
@@ -105,7 +104,7 @@ def basic_agent(board):
                 hidden = kb[4]
 
                 if clue - mines == hidden:
-                    newMines = get_all_neighbors(agent, coord)
+                    newMines = get_all_hidden_neighbors(agent, coord)
                     for coord in newMines:
                         if coord in all_moves:
                             all_moves.remove(coord)
@@ -119,8 +118,8 @@ def basic_agent(board):
                 # corner cell
                 if (x == 0 and y == 0) or (x == 0 and y == dimension - 1) or (x == dimension - 1 and y == 0) or (x == dimension - 1 and y == dimension - 1):
                     if (3 - clue) - safe == hidden:
-                        newSafe = get_all_neighbors(agent, coord)
-                        knownSafe += newSafe
+                        newSafe = get_all_hidden_neighbors(agent, coord)
+                        safeList += newSafe
                         remove = True
                         removedItem = kb
                         break
@@ -128,20 +127,20 @@ def basic_agent(board):
                 # border cell
                 elif x == 0 or y == 0:
                     if (5 - clue) - safe == hidden:
-                        newSafe = get_all_neighbors(agent, coord)
-                        knownSafe += newSafe
+                        newSafe = get_all_hidden_neighbors(agent, coord)
+                        safeList += newSafe
                         remove = True
                         removedItem = kb
                         break
 
                 else:
                     if (8 - clue) - safe == hidden:
-                        newSafe = get_all_neighbors(agent, coord)
-                        knownSafe += newSafe
+                        newSafe = get_all_hidden_neighbors(agent, coord)
+                        safeList += newSafe
                         remove = True
                         removedItem = kb
                         break
-            
+
             if remove == True:
                 knowledge_base.remove(removedItem)
                 continue # we only skip the random spot if we deduce some new information
@@ -167,30 +166,38 @@ def basic_agent(board):
     print(agent)
     print(defused)
         
-def get_all_neighbors(agent, coord):
+def get_all_hidden_neighbors(agent, coord):
     neighbors = []
     dimension = agent.shape[0]
     x, y = coord
 
     if x - 1 >= 0:
-        neighbors.append((x - 1, y))
+        if agent[x - 1][y] == -1:
+            neighbors.append((x - 1, y))
         if y - 1 >= 0:
-            neighbors.append((x - 1, y - 1))
+            if agent[x - 1][y - 1] == -1:
+                neighbors.append((x - 1, y - 1))
         if y + 1 < dimension:
-            neighbors.append((x - 1, y + 1))
+            if agent[x - 1][y + 1] == -1:
+                neighbors.append((x - 1, y + 1))
         
     if x + 1 < dimension:
-        neighbors.append((x + 1, y))
+        if agent[x + 1][y] == -1:
+            neighbors.append((x + 1, y))
         if y - 1 >= 0:
-            neighbors.append((x + 1, y - 1))
+            if agent[x + 1][y - 1] == -1:
+                neighbors.append((x + 1, y - 1))
         if y + 1 < dimension:
-            neighbors.append((x + 1, y + 1))
+            if agent[x + 1][y + 1] == -1:
+                neighbors.append((x + 1, y + 1))
     
     if y - 1 >= 0:
-        neighbors.append((x, y - 1))
+        if agent[x][y - 1] == -1:
+            neighbors.append((x, y - 1))
     
     if y + 1 < dimension:
-        neighbors.append((x, y + 1))
+        if agent[x][y + 1] == -1:
+            neighbors.append((x, y + 1))
     
     return neighbors
 
