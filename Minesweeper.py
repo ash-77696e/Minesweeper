@@ -64,8 +64,6 @@ def markSafe(agent, board, safeList, all_moves, knowledge_base):
         get_mine_neighbors(agent, currSafe), get_hidden_neighbors(agent, currSafe)))
         all_moves.remove(currSafe)
 
-
-
 def basic_agent(board):
     agent = np.zeros((board.shape[0], board.shape[0]), int)
     dimension = board.shape[0]
@@ -84,25 +82,8 @@ def basic_agent(board):
         knowledge_base = [(kb[0], kb[1], get_safe_neighbors(agent, kb[0]), 
         get_mine_neighbors(agent, kb[0]), get_hidden_neighbors(agent, kb[0])) for kb in knowledge_base]
 
-        '''
-        # if there is something in our safe list, pick it as your move and move on
-        if len(safeList) > 0:
-            currSafe = safeList.pop() 
-            x, y = currSafe
-
-            agent[x][y] = board[x][y]
-
-            knowledge_base.append((currSafe, agent[x][y], 
-            get_safe_neighbors(agent, currSafe), 
-            get_mine_neighbors(agent, currSafe), get_hidden_neighbors(agent, currSafe)))
-
-            all_moves.remove(currSafe)
-            
-            continue
-        '''
-
         if len(knowledge_base) > 0:
-            removedItem = None
+            removedItems = []
             remove = False
 
             for kb in knowledge_base:
@@ -120,8 +101,8 @@ def basic_agent(board):
                         defused += 1
                     
                     remove = True
-                    removedItem = kb
-                    break
+                    removedItems.append(kb)
+                    continue
                 
                 # corner cell
                 if (x == 0 and y == 0) or (x == 0 and y == dimension - 1) or (x == dimension - 1 and y == 0) or (x == dimension - 1 and y == dimension - 1):
@@ -129,8 +110,8 @@ def basic_agent(board):
                         safeList = get_all_hidden_neighbors(agent, coord)
                         markSafe(agent, board, safeList, all_moves, knowledge_base)
                         remove = True
-                        removedItem = kb
-                        break
+                        removedItems.append(kb)
+                        continue
                 
                 # border cell
                 elif x == 0 or y == 0:
@@ -138,20 +119,21 @@ def basic_agent(board):
                         safeList = get_all_hidden_neighbors(agent, coord)
                         markSafe(agent, board, safeList, all_moves, knowledge_base)
                         remove = True
-                        removedItem = kb
-                        break
+                        removedItems.append(kb)
+                        continue
 
                 else:
                     if (8 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
                         markSafe(agent, board, safeList, all_moves, knowledge_base)
                         remove = True
-                        removedItem = kb
-                        break
+                        removedItems.append(kb)
+                        continue
 
             if remove == True:
-                knowledge_base.remove(removedItem)
-                continue # we only skip the random spot if we deduce some new information
+                for item in removedItems:
+                    knowledge_base.remove(item)
+                continue # Since we have made a move through our basic inference, no need to pick a random move
 
 
         # pick random spot from moves list
