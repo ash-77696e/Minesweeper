@@ -61,6 +61,7 @@ def markSafe(agent, board, safeList, moves, knowledge_base):
         print(currSafe)
         x, y = currSafe
         agent[x][y] = board[x][y]
+        # add to knowledge base since we make a new move
         knowledge_base.append((currSafe, agent[x][y], 
         get_safe_neighbors(agent, currSafe), 
         get_mine_neighbors(agent, currSafe), get_hidden_neighbors(agent, currSafe)))
