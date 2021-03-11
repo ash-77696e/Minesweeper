@@ -57,6 +57,8 @@ def generate_board(dimension, mines):
 def markSafe(agent, board, safeList, all_moves, knowledge_base):
     while len(safeList) > 0:
         currSafe = safeList.pop()
+        print('make a safe move at')
+        print(currSafe)
         x, y = currSafe
         agent[x][y] = board[x][y]
         knowledge_base.append((currSafe, agent[x][y], 
@@ -79,6 +81,7 @@ def basic_agent(board):
             all_moves.append((x, y))
 
     while len(all_moves) > 0:
+        # Update knowledge base before making a move
         knowledge_base = [(kb[0], kb[1], get_safe_neighbors(agent, kb[0]), 
         get_mine_neighbors(agent, kb[0]), get_hidden_neighbors(agent, kb[0])) for kb in knowledge_base]
 
@@ -108,7 +111,7 @@ def basic_agent(board):
                 if (x == 0 and y == 0) or (x == 0 and y == dimension - 1) or (x == dimension - 1 and y == 0) or (x == dimension - 1 and y == dimension - 1):
                     if (3 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
-                        markSafe(agent, board, safeList, all_moves, knowledge_base)
+                        markSafe(agent, board, safeList, all_moves, knowledge_base) # make a bunch of safe moves
                         remove = True
                         removedItems.append(kb)
                         continue
@@ -117,7 +120,7 @@ def basic_agent(board):
                 elif x == 0 or y == 0:
                     if (5 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
-                        markSafe(agent, board, safeList, all_moves, knowledge_base)
+                        markSafe(agent, board, safeList, all_moves, knowledge_base) # make a bunch of safe moves
                         remove = True
                         removedItems.append(kb)
                         continue
@@ -135,6 +138,9 @@ def basic_agent(board):
                     knowledge_base.remove(item)
                 continue # Since we have made a move through our basic inference, no need to pick a random move
 
+            # if we don't need to remove anything from the knowledge base, that means we didn't make any moves through basic inference
+            # so, we must make a random choice
+
 
         # pick random spot from moves list
         i = randint(0, len(all_moves) - 1)
@@ -144,6 +150,8 @@ def basic_agent(board):
 
         # if we didn't pick a mine, update knowledge base
         if agent[x][y] != 9:
+            print('random safe move at')
+            print(coord)
             knowledge_base.append((coord, agent[x][y], 
             get_safe_neighbors(agent, coord), 
             get_mine_neighbors(agent, coord), get_hidden_neighbors(agent, coord)))
