@@ -54,7 +54,7 @@ def generate_board(dimension, mines):
     
     return board
 
-def markSafe(agent, board, safeList, all_moves, knowledge_base):
+def markSafe(agent, board, safeList, moves, knowledge_base):
     while len(safeList) > 0:
         currSafe = safeList.pop()
         print('make a safe move at')
@@ -64,7 +64,7 @@ def markSafe(agent, board, safeList, all_moves, knowledge_base):
         knowledge_base.append((currSafe, agent[x][y], 
         get_safe_neighbors(agent, currSafe), 
         get_mine_neighbors(agent, currSafe), get_hidden_neighbors(agent, currSafe)))
-        all_moves.remove(currSafe)
+        moves.remove(currSafe)
 
 def basic_agent(board):
     agent = np.zeros((board.shape[0], board.shape[0]), int)
@@ -87,7 +87,7 @@ def basic_agent(board):
 
         if len(knowledge_base) > 0:
             removedItems = []
-            remove = False
+            moveMade = False
 
             for kb in knowledge_base:
                 coord = kb[0]
@@ -103,7 +103,7 @@ def basic_agent(board):
                         agent[coord[0]][coord[1]] = 9
                         defused += 1
                     
-                    remove = True
+                    moveMade = True
                     removedItems.append(kb)
                     continue
                 
@@ -112,7 +112,7 @@ def basic_agent(board):
                     if (3 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
                         markSafe(agent, board, safeList, moves, knowledge_base) # make a bunch of safe moves
-                        remove = True
+                        moveMade = True
                         removedItems.append(kb)
                         continue
                 
@@ -121,7 +121,7 @@ def basic_agent(board):
                     if (5 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
                         markSafe(agent, board, safeList, moves, knowledge_base) # make a bunch of safe moves
-                        remove = True
+                        moveMade = True
                         removedItems.append(kb)
                         continue
 
@@ -129,11 +129,11 @@ def basic_agent(board):
                     if (8 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
                         markSafe(agent, board, safeList, moves, knowledge_base)
-                        remove = True
+                        moveMade = True
                         removedItems.append(kb)
                         continue
 
-            if remove == True:
+            if moveMade == True:
                 for item in removedItems:
                     knowledge_base.remove(item)
                 continue # Since we have made a move(s) through our basic inference, no need to pick a random move
@@ -156,7 +156,7 @@ def basic_agent(board):
             get_safe_neighbors(agent, coord), 
             get_mine_neighbors(agent, coord), get_hidden_neighbors(agent, coord)))
         else:
-            print('you picked a mine at:')
+            print('you picked a mine (random) at:')
             print((x, y))
         
         moves.remove(coord)
@@ -304,5 +304,6 @@ def get_hidden_neighbors(agent, coord):
 
     return hidden
 
-board = generate_board(16, 40)
-basic_agent(board)
+if __name__ == '__main__':
+    board = generate_board(16, 60)
+    basic_agent(board)
