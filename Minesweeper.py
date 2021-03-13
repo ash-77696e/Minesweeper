@@ -65,29 +65,34 @@ def markSafe(agent, board, safeList, moves, knowledge_base):
         knowledge_base.append((currSafe, agent[x][y], 
         get_safe_neighbors(agent, currSafe), 
         get_mine_neighbors(agent, currSafe), get_hidden_neighbors(agent, currSafe)))
+        # once we make a move we should remove it from moves list
         moves.remove(currSafe)
 
-def basic_agent(board):
+def basic_agent(board, totalMines):
     agent = np.zeros((board.shape[0], board.shape[0]), int)
     dimension = board.shape[0]
     agent[:] = -1 # -1 represents an unknown cell
 
     defused = 0
+    total = 0
 
     moves = []
+    
     knowledge_base = []
 
     for x in range(agent.shape[0]):
         for y in range(agent.shape[0]):
             moves.append((x, y))
 
-    while len(moves) > 0:
+    while total != totalMines:
         # Update knowledge base with most updated information before making a move
         knowledge_base = [(kb[0], kb[1], get_safe_neighbors(agent, kb[0]), 
         get_mine_neighbors(agent, kb[0]), get_hidden_neighbors(agent, kb[0])) for kb in knowledge_base]
 
+        # try to make a move through basic inference
         if len(knowledge_base) > 0:
             removedItems = []
+            inferenceMade = False
             moveMade = False
 
             for kb in knowledge_base:
@@ -97,59 +102,69 @@ def basic_agent(board):
                 mines = kb[3]
                 hidden = kb[4]
 
+                # everything around is a mine
                 if clue - mines == hidden:
                     newMines = get_all_hidden_neighbors(agent, coord)
                     for coord in newMines:
                         moves.remove(coord)
                         agent[coord[0]][coord[1]] = 9
                         defused += 1
+                        total += 1
                     
-                    moveMade = True
+                    inferenceMade = True
                     removedItems.append(kb)
-                    continue
+                    
                 
                 # corner cell
-                if (x == 0 and y == 0) or (x == 0 and y == dimension - 1) or (x == dimension - 1 and y == 0) or (x == dimension - 1 and y == dimension - 1):
+                elif (x == 0 and y == 0) or (x == 0 and y == dimension - 1) or (x == dimension - 1 and y == 0) or (x == dimension - 1 and y == dimension - 1):
                     if (3 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
                         markSafe(agent, board, safeList, moves, knowledge_base) # make a bunch of safe moves
+                        inferenceMade = True
                         moveMade = True
                         removedItems.append(kb)
-                        continue
+                        
                 
                 # border cell
                 elif x == 0 or y == 0:
                     if (5 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
                         markSafe(agent, board, safeList, moves, knowledge_base) # make a bunch of safe moves
+                        inferenceMade = True
                         moveMade = True
                         removedItems.append(kb)
-                        continue
+                        
 
                 else:
                     if (8 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
                         markSafe(agent, board, safeList, moves, knowledge_base)
-                        moveMade = True
+                        inferenceMade = True
+                        modeMade = True
                         removedItems.append(kb)
-                        continue
+                        
 
-            if moveMade == True:
+            if inferenceMade == True:
                 for item in removedItems:
                     knowledge_base.remove(item)
+
+            if moveMade == True:
                 continue # Since we have made a move(s) through our basic inference, no need to pick a random move
 
             # if we don't need to remove anything from the knowledge base, that means we didn't make any moves through basic inference
             # so, we must make a random choice
 
-
-        # pick random spot from moves list
+        # once we run out of moves, we end
+        if len(moves) <= 0:
+            break
+        
+        # pick random move
         i = randint(0, len(moves) - 1)
         coord = moves[i]
         x, y = coord
         agent[x][y] = board[x][y]
 
-        # if we didn't pick a mine, update knowledge base
+        # if we didn't pick a mine, add to knowledge base
         if agent[x][y] != 9:
             print('random safe move at')
             print(coord)
@@ -157,14 +172,35 @@ def basic_agent(board):
             get_safe_neighbors(agent, coord), 
             get_mine_neighbors(agent, coord), get_hidden_neighbors(agent, coord)))
         else:
+            total += 1
             print('you picked a mine (random) at:')
-            print((x, y))
+            print(coord)
         
         moves.remove(coord)
     
     print(agent)
-    print(defused)
-        
+    return defused
+
+def advanced_agent(board):
+    agent = np.zeros((board.shape[0], board.shape[0]))
+    agent[:] = -1
+    print(agent)
+
+    count = 0
+
+    num_to_coord = {}
+    coord_to_num = {}
+
+    for x in range(agent.shape[0]):
+        for y in range(agent.shape[0]):
+            num_to_coord[count] = (x, y)
+            coord_to_num[(x, y)] = count
+            count += 1
+    
+    print(coord_to_num)
+    print(num_to_coord)
+
+
 def get_all_hidden_neighbors(agent, coord):
     neighbors = []
     dimension = agent.shape[0]
@@ -306,5 +342,6 @@ def get_hidden_neighbors(agent, coord):
     return hidden
 
 if __name__ == '__main__':
-    board = generate_board(16, 60)
-    basic_agent(board)
+    board = generate_board(20, 40)
+    defused = basic_agent(board, 40)
+    print(defused)
