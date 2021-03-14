@@ -2,18 +2,26 @@ import numpy as np
 import sys
 from random import *
 
-def generate_board(dimension, mines):
+def generate_board(dimension, density):
     board = np.zeros((dimension, dimension), dtype=int)
 
-    while mines > 0:
-        x = randint(0, dimension - 1)
-        y = randint(0, dimension - 1)
+    # while mines > 0:
+    #     x = randint(0, dimension - 1)
+    #     y = randint(0, dimension - 1)
 
-        if board[x][y] == 9:
-            continue
+    #     if board[x][y] == 9:
+    #         continue
 
-        board[x][y] = 9
-        mines -= 1
+    #     board[x][y] = 9
+    #     mines -= 1
+
+    totalMines = 0
+
+    for x in range(board.shape[0]):
+        for y in range(board.shape[0]):
+            if random() < density:
+                board[x][y] = 9
+                totalMines += 1
     
     for x in range(0, dimension):
         for y in range(0, dimension):
@@ -52,7 +60,7 @@ def generate_board(dimension, mines):
 
             board[x][y] = mines
     
-    return board
+    return board, totalMines
 
 def markSafe(agent, board, safeList, moves, knowledge_base):
     while len(safeList) > 0:
@@ -342,6 +350,8 @@ def get_hidden_neighbors(agent, coord):
     return hidden
 
 if __name__ == '__main__':
-    board = generate_board(20, 40)
-    defused = basic_agent(board, 40)
+    board, totalMines = generate_board(8, 0.1)
+    print(totalMines)
+    defused = basic_agent(board, totalMines)
     print(defused)
+    print(totalMines)
