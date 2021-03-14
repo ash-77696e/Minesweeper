@@ -65,14 +65,15 @@ def generate_board(dimension, density):
 def markSafe(agent, board, safeList, moves, knowledge_base):
     while len(safeList) > 0:
         currSafe = safeList.pop()
-        print('make a safe move at')
-        print(currSafe)
+        #print('make a safe move at')
+        #print(currSafe)
         x, y = currSafe
         agent[x][y] = board[x][y]
+
+        if agent[x][y] == 9:
+            print('this is a mine')
         # add to knowledge base since we make a new move
-        knowledge_base.append((currSafe, agent[x][y], 
-        get_safe_neighbors(agent, currSafe), 
-        get_mine_neighbors(agent, currSafe), get_hidden_neighbors(agent, currSafe)))
+        knowledge_base.append(currSafe)
         # once we make a move we should remove it from moves list
         moves.remove(currSafe)
 
@@ -93,9 +94,6 @@ def basic_agent(board, totalMines):
             moves.append((x, y))
 
     while len(moves) > 0:
-        # Update knowledge base with most updated information before making a move
-        knowledge_base = [(kb[0], kb[1], get_safe_neighbors(agent, kb[0]), 
-        get_mine_neighbors(agent, kb[0]), get_hidden_neighbors(agent, kb[0])) for kb in knowledge_base]
 
         # try to make a move through basic inference
         if len(knowledge_base) > 0:
@@ -103,24 +101,25 @@ def basic_agent(board, totalMines):
             inferenceMade = False
             moveMade = False
 
-            for kb in knowledge_base:
-                coord = kb[0]
-                clue = kb[1]
-                safe = kb[2]
-                mines = kb[3]
-                hidden = kb[4]
+            for coord in knowledge_base:
+                x, y = coord
+                clue = agent[x][y]
+                safe = get_safe_neighbors(agent, coord)
+                mines = get_mine_neighbors(agent, coord)
+                hidden = get_hidden_neighbors(agent, coord)
 
                 # everything around is a mine
                 if clue - mines == hidden:
                     newMines = get_all_hidden_neighbors(agent, coord)
                     for coord in newMines:
                         moves.remove(coord)
-                        agent[coord[0]][coord[1]] = 9
+                        x, y = coord
+                        agent[x][y] = 9
                         defused += 1
                         total += 1
                     
                     inferenceMade = True
-                    removedItems.append(kb)
+                    removedItems.append(coord)
                     
                 
                 # corner cell
@@ -130,17 +129,17 @@ def basic_agent(board, totalMines):
                         markSafe(agent, board, safeList, moves, knowledge_base) # make a bunch of safe moves
                         inferenceMade = True
                         moveMade = True
-                        removedItems.append(kb)
+                        removedItems.append(coord)
                         
                 
                 # border cell
-                elif x == 0 or y == 0:
+                elif x == 0 or y == 0 or x == dimension - 1 or y == dimension - 1:
                     if (5 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
                         markSafe(agent, board, safeList, moves, knowledge_base) # make a bunch of safe moves
                         inferenceMade = True
                         moveMade = True
-                        removedItems.append(kb)
+                        removedItems.append(coord)
                         
 
                 else:
@@ -149,12 +148,13 @@ def basic_agent(board, totalMines):
                         markSafe(agent, board, safeList, moves, knowledge_base)
                         inferenceMade = True
                         modeMade = True
-                        removedItems.append(kb)
+                        removedItems.append(coord)
                         
 
             if inferenceMade == True:
                 for item in removedItems:
-                    knowledge_base.remove(item)
+                    if item in knowledge_base:
+                        knowledge_base.remove(item)
 
             if moveMade == True:
                 continue # Since we have made a move(s) through our basic inference, no need to pick a random move
@@ -174,19 +174,18 @@ def basic_agent(board, totalMines):
 
         # if we didn't pick a mine, add to knowledge base
         if agent[x][y] != 9:
-            print('random safe move at')
-            print(coord)
-            knowledge_base.append((coord, agent[x][y], 
-            get_safe_neighbors(agent, coord), 
-            get_mine_neighbors(agent, coord), get_hidden_neighbors(agent, coord)))
+            #print('random safe move at')
+            #print(coord)
+            knowledge_base.append(coord)
         else:
             total += 1
-            print('you picked a mine (random) at:')
-            print(coord)
+            #print('you picked a mine (random) at:')
+            #print(coord)
         
         moves.remove(coord)
     
     print(agent)
+    print(knowledge_base)
     return defused
 
 def advanced_agent(board):
@@ -225,9 +224,6 @@ def advanced_agent(board):
             moves.append((x, y))
 
     while len(moves) > 0:
-        # Update knowledge base with most updated information before making a move
-        knowledge_base = [(kb[0], kb[1], get_safe_neighbors(agent, kb[0]), 
-        get_mine_neighbors(agent, kb[0]), get_hidden_neighbors(agent, kb[0])) for kb in knowledge_base]
 
         # try to make a move through basic inference
         if len(knowledge_base) > 0:
@@ -235,24 +231,25 @@ def advanced_agent(board):
             inferenceMade = False
             moveMade = False
 
-            for kb in knowledge_base:
-                coord = kb[0]
-                clue = kb[1]
-                safe = kb[2]
-                mines = kb[3]
-                hidden = kb[4]
+            for coord in knowledge_base:
+                x, y = coord
+                clue = agent[x][y]
+                safe = get_safe_neighbors(agent, coord)
+                mines = get_mine_neighbors(agent, coord)
+                hidden = get_hidden_neighbors(agent, coord)
 
                 # everything around is a mine
                 if clue - mines == hidden:
                     newMines = get_all_hidden_neighbors(agent, coord)
                     for coord in newMines:
                         moves.remove(coord)
-                        agent[coord[0]][coord[1]] = 9
+                        x, y = coord
+                        agent[x][y] = 9
                         defused += 1
                         total += 1
                     
                     inferenceMade = True
-                    removedItems.append(kb)
+                    removedItems.append(coord)
                     
                 
                 # corner cell
@@ -262,17 +259,17 @@ def advanced_agent(board):
                         markSafe(agent, board, safeList, moves, knowledge_base) # make a bunch of safe moves
                         inferenceMade = True
                         moveMade = True
-                        removedItems.append(kb)
+                        removedItems.append(coord)
                         
                 
                 # border cell
-                elif x == 0 or y == 0:
+                elif x == 0 or y == 0 or x == dimension - 1 or y == dimension - 1:
                     if (5 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
                         markSafe(agent, board, safeList, moves, knowledge_base) # make a bunch of safe moves
                         inferenceMade = True
                         moveMade = True
-                        removedItems.append(kb)
+                        removedItems.append(coord)
                         
 
                 else:
@@ -281,57 +278,14 @@ def advanced_agent(board):
                         markSafe(agent, board, safeList, moves, knowledge_base)
                         inferenceMade = True
                         modeMade = True
-                        removedItems.append(kb)
+                        removedItems.append(coord)
                         
 
             if inferenceMade == True:
                 for item in removedItems:
-                    knowledge_base.remove(item)
-            else:
-                # dictionary
-                knowledge_base = [(kb[0], kb[1], get_safe_neighbors(agent, kb[0]), 
-                get_mine_neighbors(agent, kb[0]), get_hidden_neighbors(agent, kb[0])) for kb in knowledge_base]
-                colToCoordList = {} 
-                coordToCol = {}
+                    if item in knowledge_base:
+                        knowledge_base.remove(item)
 
-                count = 0
-                for kb in knowledge_base:
-                    coord = kb[0] 
-
-                    hiddenList = get_all_hidden_neighbors(agent, coord)
-                    for neighbor in hiddenList:
-                        if neighbor not in colToCoordList.values():
-                            colToCoordList[count] = neighbor
-                            coordToCol[neighbor] = count
-                            count += 1
-
-                matrix = []
-
-                # list of equations
-                print(knowledge_base)
-                for kb in knowledge_base:
-                    coord = kb[0]
-                    clue = kb[1]
-                    safe = kb[2]
-                    mines = kb[3]
-                    hidden = kb[4]
-                
-                    equation = []
-                    hiddenList = get_all_hidden_neighbors(agent, coord)
-
-                    for i in range(0, count):
-                        if colToCoordList[i] in hiddenList:
-                            equation.append(1)
-                        else:  
-                            equation.append(0)
-                    equation.append(clue - mines)
-                    matrix.append(equation)
-                
-                print (matrix)
-
-
-
-            
             if moveMade == True:
                 continue # Since we have made a move(s) through our basic inference, no need to pick a random move
 
@@ -350,19 +304,18 @@ def advanced_agent(board):
 
         # if we didn't pick a mine, add to knowledge base
         if agent[x][y] != 9:
-            print('random safe move at')
-            print(coord)
-            knowledge_base.append((coord, agent[x][y], 
-            get_safe_neighbors(agent, coord), 
-            get_mine_neighbors(agent, coord), get_hidden_neighbors(agent, coord)))
+            #print('random safe move at')
+            #print(coord)
+            knowledge_base.append(coord)
         else:
             total += 1
-            print('you picked a mine (random) at:')
-            print(coord)
+            #print('you picked a mine (random) at:')
+            #print(coord)
         
         moves.remove(coord)
     
     print(agent)
+    print(knowledge_base)
     return defused
 
 def get_all_hidden_neighbors(agent, coord):
@@ -508,6 +461,6 @@ def get_hidden_neighbors(agent, coord):
 if __name__ == '__main__':
     board, totalMines = generate_board(20, 0.3)
     print(totalMines)
-    defused = advanced_agent(board)
+    defused = basic_agent(board, totalMines)
     print(defused)
     print(totalMines)
