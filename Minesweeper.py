@@ -285,6 +285,43 @@ def advanced_agent(board):
                 for item in removedItems:
                     if item in knowledge_base:
                         knowledge_base.remove(item)
+            
+            else:
+                colToCoordList = {} 
+                coordToCol = {}
+
+                count = 0
+                for coord in knowledge_base:
+                    hiddenList = get_all_hidden_neighbors(agent, coord)
+                    for neighbor in hiddenList:
+                        if neighbor not in colToCoordList.values():
+                            colToCoordList[count] = neighbor
+                            coordToCol[neighbor] = count
+                            count += 1
+
+                matrix = []
+
+                # list of equations
+                print(knowledge_base)
+                for coord in knowledge_base:
+                    x, y = coord
+                    clue = agent[x][y]
+                    safe = get_safe_neighbors(agent, coord)
+                    mines = get_mine_neighbors(agent, coord)
+                    hidden = get_hidden_neighbors(agent, coord)
+                
+                    equation = []
+                    hiddenList = get_all_hidden_neighbors(agent, coord)
+
+                    for i in range(0, count):
+                        if colToCoordList[i] in hiddenList:
+                            equation.append(1)
+                        else:  
+                            equation.append(0)
+                    equation.append(clue - mines)
+                    matrix.append(equation)
+                
+                print (matrix)
 
             if moveMade == True:
                 continue # Since we have made a move(s) through our basic inference, no need to pick a random move
@@ -461,6 +498,6 @@ def get_hidden_neighbors(agent, coord):
 if __name__ == '__main__':
     board, totalMines = generate_board(20, 0.3)
     print(totalMines)
-    defused = basic_agent(board, totalMines)
+    defused = advanced_agent(board)
     print(defused)
     print(totalMines)
