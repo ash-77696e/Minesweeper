@@ -84,7 +84,7 @@ def basic_agent(board, totalMines):
         for y in range(agent.shape[0]):
             moves.append((x, y))
 
-    while total != totalMines:
+    while len(moves) > 0:
         # Update knowledge base with most updated information before making a move
         knowledge_base = [(kb[0], kb[1], get_safe_neighbors(agent, kb[0]), 
         get_mine_neighbors(agent, kb[0]), get_hidden_neighbors(agent, kb[0])) for kb in knowledge_base]
