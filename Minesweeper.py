@@ -355,6 +355,72 @@ def advanced_agent(board):
     print(knowledge_base)
     return defused
 
+def reduce_matrix(matrix):
+    rowDim = len(matrix)
+    colDim = len(matrix[0])
+
+    # forward substitution
+    for j in range(0, colDim - 1):
+        i = j
+        if i >= rowDim:
+            break
+        factor = matrix[i][j]
+        if factor == 0: # try row swap
+            count = 1
+            maxFactor = factor
+            swapRowNum = i
+            while(i + count < rowDim):
+                if abs(matrix[i + count][j]) > maxFactor:
+                    maxFactor = abs(matrix[i + count][j])
+                    swapRowNum = i + count
+                count += 1
+            row_swap(matrix, i, swapRowNum)
+            factor = matrix[i][j]
+
+        for x in range(0, colDim):
+            matrix[i][x] = matrix[i][x] / factor
+        
+        rowCount = 1
+
+        while (i + rowCount < rowDim):
+            factor = matrix[i + rowCount][j] / matrix[i][j]
+            for x in range(0, colDim):
+                matrix[i + rowCount][x] = matrix[i + rowCount][x] - factor * matrix[i][x] 
+            rowCount += 1
+
+    # backward substitution
+
+    j = rowDim - 1
+    while j >= 0:
+        i = j
+        rowCount = 1
+        while (i - rowCount >= 0):
+            if matrix[i][j] == 0:
+                break
+            else:
+                factor = matrix[i - rowCount][j] / matrix[i][j]
+            for x in range(0, colDim):
+                matrix[i - rowCount][x] = matrix[i - rowCount][x] - factor * matrix[i][x]
+            rowCount += 1
+        j -= 1
+
+    return matrix
+
+def row_swap(matrix, row1, row2):
+    colDim = len(matrix[0])
+    tempRow = []
+    
+    for j in range(0, colDim):
+        tempRow.append(matrix[row1][j])
+    
+    for j in range(0, colDim):
+        matrix[row1][j] = matrix[row2][j]
+    
+    for j in range(0, colDim):
+        matrix[row2][j] = tempRow[j]
+    
+
+
 def get_all_hidden_neighbors(agent, coord):
     neighbors = []
     dimension = agent.shape[0]
@@ -496,8 +562,20 @@ def get_hidden_neighbors(agent, coord):
     return hidden
 
 if __name__ == '__main__':
-    board, totalMines = generate_board(20, 0.3)
-    print(totalMines)
-    defused = advanced_agent(board)
-    print(defused)
-    print(totalMines)
+    # board, totalMines = generate_board(20, 0.3)
+    # print(totalMines)
+    # defused = advanced_agent(board)
+    # print(defused)
+    # print(totalMines)
+
+    matrix = [[1, 0, 1, 0, 0 , 1], [0, 0, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1]]
+    #matrix = [[1, 1, 0, 0, 1], [1, 1, 1, 0, 1], [0, 1, 1, 1, 2], [0, 0, 1, 1, 1]]
+    print('matrix before is: ')
+    print(matrix)
+    matrix = reduce_matrix(matrix)
+    print('matrix after is: ')
+    print(matrix)
+
+    # row_swap(matrix, 1, 2)
+    # print('matrix after is: ')
+    # print(matrix)
