@@ -75,7 +75,22 @@ def markSafe(agent, board, safeList, moves, knowledge_base):
         # add to knowledge base since we make a new move
         knowledge_base.append(currSafe)
         # once we make a move we should remove it from moves list
-        moves.remove(currSafe)
+        if currSafe in moves:
+            moves.remove(currSafe)
+
+def markMines(agent, newMines, moves):
+    defused = 0
+    total = 0
+    for coord in newMines:
+        if coord in moves:
+            moves.remove(coord)
+        x, y = coord
+        agent[x][y] = 9
+        defused += 1
+        total += 1
+    
+    return defused, total
+
 
 def basic_agent(board, totalMines):
     agent = np.zeros((board.shape[0], board.shape[0]), int)
@@ -111,12 +126,16 @@ def basic_agent(board, totalMines):
                 # everything around is a mine
                 if clue - mines == hidden:
                     newMines = get_all_hidden_neighbors(agent, coord)
-                    for coord in newMines:
-                        moves.remove(coord)
-                        x, y = coord
-                        agent[x][y] = 9
-                        defused += 1
-                        total += 1
+                    tempDefused, tempTotal = markMines(agent, newMines, moves)
+                    defused += tempDefused
+                    total += tempTotal
+                    
+                    # for coord in newMines:
+                    #     moves.remove(coord)
+                    #     x, y = coord
+                    #     agent[x][y] = 9
+                    #     defused += 1
+                    #     total += 1
                     
                     inferenceMade = True
                     removedItems.append(coord)
@@ -241,12 +260,15 @@ def advanced_agent(board):
                 # everything around is a mine
                 if clue - mines == hidden:
                     newMines = get_all_hidden_neighbors(agent, coord)
-                    for coord in newMines:
-                        moves.remove(coord)
-                        x, y = coord
-                        agent[x][y] = 9
-                        defused += 1
-                        total += 1
+                    tempDefused, tempTotal = markMines(agent, newMines, moves)
+                    defused += tempDefused
+                    total += tempTotal
+                    # for coord in newMines:
+                    #     moves.remove(coord)
+                    #     x, y = coord
+                    #     agent[x][y] = 9
+                    #     defused += 1
+                    #     total += 1
                     
                     inferenceMade = True
                     removedItems.append(coord)
@@ -321,7 +343,8 @@ def advanced_agent(board):
                     equation.append(clue - mines)
                     matrix.append(equation)
                 
-                print (matrix)
+                reduce_matrix(matrix)
+                infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordList)
 
             if moveMade == True:
                 continue # Since we have made a move(s) through our basic inference, no need to pick a random move
@@ -376,6 +399,8 @@ def reduce_matrix(matrix):
                 count += 1
             row_swap(matrix, i, swapRowNum)
             factor = matrix[i][j]
+            if factor == 0:
+                continue
 
         for x in range(0, colDim):
             matrix[i][x] = matrix[i][x] / factor
@@ -389,8 +414,10 @@ def reduce_matrix(matrix):
             rowCount += 1
 
     # backward substitution
-
-    j = rowDim - 1
+    if colDim > rowDim:
+        j = rowDim - 1
+    else:
+        j = colDim - 1
     while j >= 0:
         i = j
         rowCount = 1
@@ -419,7 +446,49 @@ def row_swap(matrix, row1, row2):
     for j in range(0, colDim):
         matrix[row2][j] = tempRow[j]
     
+def infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordList):
+    rowDim  = len(matrix)
+    colDim = len(matrix[0])
+    newMines = []
+    safeList = []
 
+    for i in range(0, rowDim):
+        if ones_zeros_negatives(matrix, i) and matrix[i][colDim - 1] == count_ones(matrix, i):
+            for j in range(0, colDim - 1):
+                if matrix[i][j] == 1:
+                    newMines.append(colToCoordList[j])
+                if matrix[i][j] == -1:
+                    safeList.append(colToCoordList[j])
+        elif ones_zeros(matrix, i) and matrix[i][colDim - 1] == 0:
+            for j in range(0, colDim - 1):
+                if matrix[i][j] == 1:
+                    safeList.append(colToCoordList[j])
+    
+    markMines(agent, newMines, moves)
+    markSafe(agent, board, safeList, moves, knowledge_base)
+
+
+def ones_zeros_negatives(matrix, rowNum): # checks if row is only 0s and 1s and negatives (except for augmented part)
+    colDim = len(matrix[0])
+    for j in range(0, colDim - 1):
+        if matrix[rowNum][j] != 0 and matrix[rowNum][j] != 1 and (matrix[rowNum][j] > 0 and matrix[rowNum][j] < 1) and matrix[rowNum][j] > 1:
+            return False
+    return True
+
+def ones_zeros(matrix, rowNum):
+    colDim = len(matrix[0])
+    for j in range(0, colDim - 1):
+        if matrix[rowNum][j] != 0 and matrix[rowNum][j] != 1:
+            return False
+    return True
+
+def count_ones(matrix, rowNum): # counts ones in a row (except for the augmented part)
+    count = 0
+    colDim = len(matrix[0])
+    for j in range(0, colDim - 1):
+        if matrix[rowNum][j] == 1:
+            count += 1
+    return count
 
 def get_all_hidden_neighbors(agent, coord):
     neighbors = []
@@ -562,19 +631,19 @@ def get_hidden_neighbors(agent, coord):
     return hidden
 
 if __name__ == '__main__':
-    # board, totalMines = generate_board(20, 0.3)
-    # print(totalMines)
-    # defused = advanced_agent(board)
-    # print(defused)
-    # print(totalMines)
+    board, totalMines = generate_board(20, 0.3)
+    print(totalMines)
+    defused = advanced_agent(board)
+    print(defused)
+    print(totalMines)
 
-    matrix = [[1, 0, 1, 0, 0 , 1], [0, 0, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1]]
+    # matrix = [[1, 0, 1, 0, 0 , 1], [0, 0, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1]]
     #matrix = [[1, 1, 0, 0, 1], [1, 1, 1, 0, 1], [0, 1, 1, 1, 2], [0, 0, 1, 1, 1]]
-    print('matrix before is: ')
-    print(matrix)
-    matrix = reduce_matrix(matrix)
-    print('matrix after is: ')
-    print(matrix)
+    # print('matrix before is: ')
+    # print(matrix)
+    # matrix = reduce_matrix(matrix)
+    # print('matrix after is: ')
+    # print(matrix)
 
     # row_swap(matrix, 1, 2)
     # print('matrix after is: ')
