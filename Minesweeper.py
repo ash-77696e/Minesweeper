@@ -4,17 +4,6 @@ from random import *
 
 def generate_board(dimension, density):
     board = np.zeros((dimension, dimension), dtype=int)
-
-    # while mines > 0:
-    #     x = randint(0, dimension - 1)
-    #     y = randint(0, dimension - 1)
-
-    #     if board[x][y] == 9:
-    #         continue
-
-    #     board[x][y] = 9
-    #     mines -= 1
-
     totalMines = 0
 
     for x in range(board.shape[0]):
@@ -92,7 +81,7 @@ def markMines(agent, newMines, moves):
     return defused, total
 
 
-def basic_agent(board, totalMines):
+def basic_agent(board):
     agent = np.zeros((board.shape[0], board.shape[0]), int)
     dimension = board.shape[0]
     agent[:] = -1 # -1 represents an unknown cell
@@ -208,25 +197,6 @@ def basic_agent(board, totalMines):
     return defused
 
 def advanced_agent(board):
-    '''
-    agent = np.zeros((board.shape[0], board.shape[0]))
-    agent[:] = -1
-    print(agent)
-
-    count = 0
-
-    num_to_coord = {}
-    coord_to_num = {}
-
-    for x in range(agent.shape[0]):
-        for y in range(agent.shape[0]):
-            num_to_coord[count] = (x, y)
-            coord_to_num[(x, y)] = count
-            count += 1
-    
-    print(coord_to_num)
-    print(num_to_coord)
-    '''
     agent = np.zeros((board.shape[0], board.shape[0]), int)
     dimension = board.shape[0]
     agent[:] = -1 # -1 represents an unknown cell
@@ -249,6 +219,7 @@ def advanced_agent(board):
             removedItems = []
             inferenceMade = False
             moveMade = False
+            advancedInfer = False
 
             for coord in knowledge_base:
                 x, y = coord
@@ -344,11 +315,20 @@ def advanced_agent(board):
                     matrix.append(equation)
                 
                 reduce_matrix(matrix)
-                tempDefused, tempTotal = infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordList)
+                tempDefused, tempTotal, advancedInfer = infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordList)
                 defused += tempDefused
                 total += tempTotal
 
-            if moveMade == True:
+                removedItems = []
+
+                for coord in knowledge_base:
+                    if get_hidden_neighbors(agent, coord) == 0:
+                        removedItems.append(coord)
+                
+                for coord in removedItems:
+                    knowledge_base.remove(coord)
+
+            if moveMade or advancedInfer:
                 continue # Since we have made a move(s) through our basic inference, no need to pick a random move
 
             # if we don't need to remove anything from the knowledge base, that means we didn't make any moves through basic inference
@@ -466,9 +446,15 @@ def infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordLis
                 if matrix[i][j] == 1:
                     safeList.append(colToCoordList[j])
     
+    newMinesLen = len(newMines)
+    safeMinesLen = len(safeList)
     defused, total = markMines(agent, newMines, moves)
     markSafe(agent, board, safeList, moves, knowledge_base)
-    return defused, total
+
+    if newMinesLen > 0 or safeMinesLen > 0:
+        return defused, total, True
+
+    return defused, total, False
 
 def ones_zeros_negatives(matrix, rowNum): # checks if row is only 0s, 1s and -1s (except for augmented part)
     colDim = len(matrix[0])
@@ -632,22 +618,26 @@ def get_hidden_neighbors(agent, coord):
 
     return hidden
 
+def run_basic_trials(dim, density):
+    average = 0
+    for i in range(50):
+        board, totalMines = generate_board(dim, density)
+        defused = basic_agent(board)
+        average += (defused / totalMines)
+    
+    return (average / 50)
+
+def run_advanced_trials(dim, density):
+    average = 0
+    for i in range(50):
+        board, totalMines = generate_board(dim, density)
+        defused = advanced_agent(board)
+        average += (defused / totalMines)
+
+    return (average / 50)
+
 if __name__ == '__main__':
-    board, totalMines = generate_board(20, 0.3)
-    print(totalMines)
-    defused = advanced_agent(board)
-    print(defused)
-    print(totalMines)
-    print(defused/totalMines)
-
-    # matrix = [[1, 0, 1, 0, 0 , 1], [0, 0, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1]]
-    #matrix = [[1, 1, 0, 0, 1], [1, 1, 1, 0, 1], [0, 1, 1, 1, 2], [0, 0, 1, 1, 1]]
-    # print('matrix before is: ')
-    # print(matrix)
-    # matrix = reduce_matrix(matrix)
-    # print('matrix after is: ')
-    # print(matrix)
-
-    # row_swap(matrix, 1, 2)
-    # print('matrix after is: ')
-    # print(matrix)
+    basic_average = run_basic_trials(20, 0.3)
+    advanced_average = run_advanced_trials(20, 0.3)
+    print(basic_average)
+    print(advanced_average)
