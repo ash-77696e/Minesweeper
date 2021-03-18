@@ -635,7 +635,7 @@ def get_hidden_neighbors(agent, coord):
 if __name__ == '__main__':
     board, totalMines = generate_board(20, 0.3)
     print(totalMines)
-    defused = basic_agent(board, totalMines)
+    defused = advanced_agent(board)
     print(defused)
     print(totalMines)
     print(defused/totalMines)
