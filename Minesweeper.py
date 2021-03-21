@@ -54,13 +54,11 @@ def generate_board(dimension, density):
 def markSafe(agent, board, safeList, moves, knowledge_base):
     while len(safeList) > 0:
         currSafe = safeList.pop()
-        #print('make a safe move at')
-        #print(currSafe)
+        print('make a safe move at')
+        print(currSafe)
         x, y = currSafe
         agent[x][y] = board[x][y]
 
-        if agent[x][y] == 9:
-            print('this is a mine')
         # add to knowledge base since we make a new move
         knowledge_base.append(currSafe)
         # once we make a move we should remove it from moves list
@@ -73,6 +71,8 @@ def markMines(agent, newMines, moves):
     for coord in newMines:
         if coord in moves:
             moves.remove(coord)
+            print('mark mine at')
+            print(coord)
         x, y = coord
         agent[x][y] = 9
         defused += 1
@@ -192,8 +192,8 @@ def basic_agent(board):
         
         moves.remove(coord)
     
-    print(agent)
-    print(knowledge_base)
+    #print(agent)
+    #print(knowledge_base)
     return defused
 
 def advanced_agent(board):
@@ -213,6 +213,7 @@ def advanced_agent(board):
             moves.append((x, y))
 
     while len(moves) > 0:
+        print(agent)
 
         # try to make a move through basic inference
         if len(knowledge_base) > 0:
@@ -295,7 +296,7 @@ def advanced_agent(board):
                 matrix = []
 
                 # list of equations
-                print(knowledge_base)
+                #print(knowledge_base)
                 for coord in knowledge_base:
                     x, y = coord
                     clue = agent[x][y]
@@ -315,7 +316,7 @@ def advanced_agent(board):
                     matrix.append(equation)
                 
                 reduce_matrix(matrix)
-                tempDefused, tempTotal, advancedInfer = infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordList)
+                tempDefused, tempTotal, advancedInfer, advancedMove = infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordList)
                 defused += tempDefused
                 total += tempTotal
 
@@ -327,9 +328,12 @@ def advanced_agent(board):
                 
                 for coord in removedItems:
                     knowledge_base.remove(coord)
+                
+                if advancedInfer:
+                    print('inference was made !!')
 
-            if moveMade or advancedInfer:
-                continue # Since we have made a move(s) through our basic inference, no need to pick a random move
+            if inferenceMade or advancedInfer:
+                continue # Since we have made a move(s) through our basic / advanced inference, no need to pick a random move
 
             # if we don't need to remove anything from the knowledge base, that means we didn't make any moves through basic inference
             # so, we must make a random choice
@@ -346,18 +350,19 @@ def advanced_agent(board):
 
         # if we didn't pick a mine, add to knowledge base
         if agent[x][y] != 9:
-            #print('random safe move at')
-            #print(coord)
+            print('random safe move at')
+            print(coord)
             knowledge_base.append(coord)
         else:
             total += 1
-            #print('you picked a mine (random) at:')
-            #print(coord)
+            print('you picked a mine (random) at:')
+            print(coord)
         
         moves.remove(coord)
     
+    #print(agent)
+    #print(knowledge_base)
     print(agent)
-    print(knowledge_base)
     return defused
 
 def reduce_matrix(matrix):
@@ -451,10 +456,13 @@ def infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordLis
     defused, total = markMines(agent, newMines, moves)
     markSafe(agent, board, safeList, moves, knowledge_base)
 
-    if newMinesLen > 0 or safeMinesLen > 0:
-        return defused, total, True
+    if safeMinesLen > 0:
+        return defused, total, True, True
 
-    return defused, total, False
+    if newMinesLen > 0:
+        return defused, total, True, False
+
+    return defused, total, False, False
 
 def ones_zeros_negatives(matrix, rowNum): # checks if row is only 0s, 1s and -1s (except for augmented part)
     colDim = len(matrix[0])
@@ -637,7 +645,12 @@ def run_advanced_trials(dim, density):
     return (average / 50)
 
 if __name__ == '__main__':
-    basic_average = run_basic_trials(20, 0.3)
-    advanced_average = run_advanced_trials(20, 0.3)
+    basic_average = run_basic_trials(25, 0.4)
+    advanced_average = run_advanced_trials(25, 0.4)
     print(basic_average)
     print(advanced_average)
+
+    # board, totalMines = generate_board(40, 0.3)
+    # defused = basic_agent(board)
+    # print(totalMines)
+    # print(defused)
