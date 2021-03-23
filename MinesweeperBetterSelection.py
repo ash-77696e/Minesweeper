@@ -1,20 +1,7 @@
 import numpy as np
 import sys
+import heapq
 from random import *
-
-
-'''
-This python file is used to play out a game of minesweeper on a randomly generated board with either a basic agent or and advanced
-agent. The basic agent uses weak inference algorithms to solve the board, whereas the advanced agent combines multiple clue values and
-knowledge known about cells on the board to more effectively identify and defuse mines. To play a game of minesweeper the user must
-first generate a board using generate_board() with the specified dimension and density they want. Then, they can pass this board into 
-either the basic_agent() or advanced_agent() functions depending on which type of algorithm they want to play out minesweeper. When
-the board is generated the total number of mines on the board is returned, and when one of the agents is done solving the board it 
-returns the amount of mines that were successfully defused on the board. These values can be used to find the success rate of the 
-algorithm in its playthrough of minesweeper on a randomly generated board.
-
-Authors: Ashwin Haridas, Ritin Nair
-'''
 
 '''
 This function is used to generate a board of size dimension x dimension that has the specified mine density. The mines are randomly
@@ -92,7 +79,7 @@ Input: the current agent board, the board matrix which contains the clue values 
 Output: There is not direct returned value from this function, but the agent board, moves list, and knowledge base are all modified
 '''
 
-def markSafe(agent, board, safeList, moves, knowledge_base):
+def markSafe(agent, board, safeList, moves, knowledge_base, better_select):
     while len(safeList) > 0:
         currSafe = safeList.pop()
         print('make a safe move at')
@@ -103,6 +90,21 @@ def markSafe(agent, board, safeList, moves, knowledge_base):
 
         # add to knowledge base since we make a new move
         knowledge_base.append(currSafe)
+
+        neighbors = get_all_hidden_neighbors(agent, currSafe)
+        for neighbor in neighbors:
+            heapq.heappush(better_select, (agent[x][y], neighbor))
+        
+        remove = None
+
+        for item in better_select:
+            num, move = item
+            if currSafe == move:
+                remove = item
+        
+        if remove in better_select:
+            better_select.remove(remove)
+            print('removed somethin')
         # once we make a move we should remove it from moves list
         if currSafe in moves:
             moves.remove(currSafe)
@@ -130,140 +132,17 @@ def markMines(agent, newMines, moves):
     return defused, total
 
 '''
-This function is the basic agent which solves the minesweeper board with weak inference. Each cell in the 
-knowledge base is iterated through and certain conditions are checked to see if any inferences can be made about each of these cells'
-hidden neighbors. These inferences are only based on information about each cell individually and do not combine multiple clues
-in the knowledge base together. Therefore, this algorithm uses weak inferences. If there are no inferences that can be made 
-based on the information about cells in the knowledge base, then a random cell is selected to be revealed. If a mine is revealed
-due to an inference then the defused count is incremented to award the player a point. However, if it is revealed based on random 
-selection and not inference then the mine is said to explode, but the game continues regardless. The game goes until every cell in the
-board is revealed.
-
-Input: board which contains all the mine locations and clue values for the cells
-Output: the amount of mines successfully defused
-'''
-def basic_agent(board):
-    agent = np.zeros((board.shape[0], board.shape[0]), int)
-    dimension = board.shape[0]
-    agent[:] = -1 # -1 represents an unknown cell and initially every cell in the board is hidden
-
-    defused = 0
-    total = 0
-
-    moves = [] # list of all cells that still need to be revealed and are valid choices to be chosen
-    
-    knowledge_base = [] # list of cells with known clues that can be used to get information and make inferences
-
-    # add all cells to the moves list because they are all initially hidden
-    for x in range(agent.shape[0]):
-        for y in range(agent.shape[0]):
-            moves.append((x, y))
-
-    while len(moves) > 0:
-
-        # try to make a move through basic inference
-        if len(knowledge_base) > 0:
-            removedItems = []
-            inferenceMade = False
-            moveMade = False
-
-            for coord in knowledge_base:
-                # extract information from a cell in the knowledge base
-                # the information is calculated at each step to ensure that the knowledge base is up to date
-                x, y = coord
-                clue = agent[x][y]
-                safe = get_safe_neighbors(agent, coord)
-                mines = get_mine_neighbors(agent, coord)
-                hidden = get_hidden_neighbors(agent, coord)
-
-                # everything around is a mine
-                if clue - mines == hidden:
-                    newMines = get_all_hidden_neighbors(agent, coord)
-                    tempDefused, tempTotal = markMines(agent, newMines, moves)
-                    defused += tempDefused
-                    total += tempTotal
-                    
-                    inferenceMade = True
-                    removedItems.append(coord)
-                    
-                
-                # corner cell
-                elif (x == 0 and y == 0) or (x == 0 and y == dimension - 1) or (x == dimension - 1 and y == 0) or (x == dimension - 1 and y == dimension - 1):
-                    if (3 - clue) - safe == hidden:
-                        safeList = get_all_hidden_neighbors(agent, coord)
-                        markSafe(agent, board, safeList, moves, knowledge_base) # make a bunch of safe moves
-                        inferenceMade = True
-                        moveMade = True
-                        removedItems.append(coord)
-                        
-                
-                # border cell
-                elif x == 0 or y == 0 or x == dimension - 1 or y == dimension - 1:
-                    if (5 - clue) - safe == hidden:
-                        safeList = get_all_hidden_neighbors(agent, coord)
-                        markSafe(agent, board, safeList, moves, knowledge_base) # make a bunch of safe moves
-                        inferenceMade = True
-                        moveMade = True
-                        removedItems.append(coord)
-                        
-                # regular case
-                else:
-                    if (8 - clue) - safe == hidden:
-                        safeList = get_all_hidden_neighbors(agent, coord)
-                        markSafe(agent, board, safeList, moves, knowledge_base)
-                        inferenceMade = True
-                        moveMade = True
-                        removedItems.append(coord)
-                        
-
-            if inferenceMade == True:
-                for item in removedItems:
-                    if item in knowledge_base:
-                        knowledge_base.remove(item)
-
-            if moveMade == True:
-                continue # Since we have made a move(s) through our basic inference, no need to pick a random move
-
-            # if we don't need to remove anything from the knowledge base, that means we didn't make any moves through basic inference
-            # so, we must make a random choice
-
-        # once we run out of moves, we end
-        if len(moves) <= 0:
-            break
-        
-        # pick random move
-        i = randint(0, len(moves) - 1)
-        coord = moves[i]
-        x, y = coord
-        agent[x][y] = board[x][y]
-
-        # if we didn't pick a mine, add to knowledge base
-        if agent[x][y] != 9:
-            #print('random safe move at')
-            #print(coord)
-            knowledge_base.append(coord)
-        else:
-            total += 1
-            #print('you picked a mine (random) at:')
-            #print(coord)
-        
-        moves.remove(coord)
-    
-    #print(agent)
-    #print(knowledge_base)
-    return defused
-
-'''
-This function is the advanced agent that plays minesweeper on a randomly generated board. It uses strong inference in its algorithm
+This function is the better selection agent that plays minesweeper on a randomly generated board. It uses strong inference in its algorithm
 and combines multiple clues when possible to make inferences about the board that the basic agent is not able to. It uses the basic 
 agent algorithm to make basic inferences about cells in the knowledge base first, and then it combines all the clues in the knowledge
 base together to see how they interact and if they reveal any additional information. These advanced inferences help the advanced agent
-detect a higher amount of mines than the basic agent which gives it a higher success rate when playing minesweeper.
+detect a higher amount of mines than the basic agent which gives it a higher success rate when playing minesweeper. It uses a 
+better selection mechanism instead of random selection.
 
 Input: the board with the mine locations and clue values
 Output: the amount of mines defused
 '''
-def advanced_agent(board):
+def better_selection(board, totalMines):
     agent = np.zeros((board.shape[0], board.shape[0]), int)
     dimension = board.shape[0]
     agent[:] = -1 # -1 represents an unknown cell
@@ -272,6 +151,7 @@ def advanced_agent(board):
     total = 0
 
     moves = []
+    better_moves = []
     
     knowledge_base = []
 
@@ -311,7 +191,7 @@ def advanced_agent(board):
                 elif (x == 0 and y == 0) or (x == 0 and y == dimension - 1) or (x == dimension - 1 and y == 0) or (x == dimension - 1 and y == dimension - 1):
                     if (3 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
-                        markSafe(agent, board, safeList, moves, knowledge_base) # make a bunch of safe moves
+                        markSafe(agent, board, safeList, moves, knowledge_base, better_moves) # make a bunch of safe moves
                         inferenceMade = True
                         moveMade = True
                         removedItems.append(coord)
@@ -321,7 +201,7 @@ def advanced_agent(board):
                 elif x == 0 or y == 0 or x == dimension - 1 or y == dimension - 1:
                     if (5 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
-                        markSafe(agent, board, safeList, moves, knowledge_base) # make a bunch of safe moves
+                        markSafe(agent, board, safeList, moves, knowledge_base, better_moves) # make a bunch of safe moves
                         inferenceMade = True
                         moveMade = True
                         removedItems.append(coord)
@@ -330,7 +210,7 @@ def advanced_agent(board):
                 else:
                     if (8 - clue) - safe == hidden:
                         safeList = get_all_hidden_neighbors(agent, coord)
-                        markSafe(agent, board, safeList, moves, knowledge_base)
+                        markSafe(agent, board, safeList, moves, knowledge_base, better_moves)
                         inferenceMade = True
                         moveMade = True
                         removedItems.append(coord)
@@ -387,7 +267,7 @@ def advanced_agent(board):
                 
                 reduce_matrix(matrix) # use Gaussian Elimination to simplify the matrix and attempt to isolate variables to solve them
                 # use the siimplified matrix and additional available information to make advanced inferences about the board
-                tempDefused, tempTotal, advancedInfer, advancedMove = infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordList) 
+                tempDefused, tempTotal, advancedInfer, advancedMove = infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordList, better_moves) 
                 defused += tempDefused
                 total += tempTotal
 
@@ -412,18 +292,53 @@ def advanced_agent(board):
         # once we run out of moves, we end
         if len(moves) <= 0:
             break
-        
+
+        coord = None
+        bet_size = False
+
+        if total / totalMines > 0.05 and len(better_moves) > 0:
+            item = heapq.heappop(better_moves)
+            priority, coord = item
+            if len(better_moves) == 0:
+                bet_size = True
+            while coord not in moves and bet_size == False:
+                item = heapq.heappop(better_moves)
+                priority, coord = item
+                if len(better_moves) == 0:
+                    bet_size = True
+        else:
         # pick random move
-        i = randint(0, len(moves) - 1)
-        coord = moves[i]
+            i = randint(0, len(moves) - 1)
+            coord = moves[i]
+        
+        if bet_size:
+            i = randint(0, len(moves) - 1)
+            coord = moves[i]
+
         x, y = coord
         agent[x][y] = board[x][y]
+
+        remove = None
+
+        for item in better_moves:
+            num, move = item
+            if coord == move:
+                remove = item
+        
+        if remove in better_moves:
+            better_moves.remove(remove)
+            print('removed somethin')
 
         # if we didn't pick a mine, add to knowledge base
         if agent[x][y] != 9:
             print('random safe move at')
             print(coord)
             knowledge_base.append(coord)
+
+            neighbors = get_all_hidden_neighbors(agent, coord)
+            for neighbor in neighbors:
+                heapq.heappush(better_moves, (agent[x][y], neighbor))
+            print(better_moves)
         else:
             total += 1
             print('you picked a mine (random) at:')
@@ -525,7 +440,7 @@ Input: reduced matrix, agent, board, moves, knowledge_base, colToCoordList
 Output: defused mines, total mines defused, if an inference was made, if a move was made
 '''
 
-def infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordList):
+def infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordList, better_moves):
     rowDim  = len(matrix)
     colDim = len(matrix[0])
     newMines = []
@@ -548,7 +463,7 @@ def infer_from_matrix(matrix, agent, board, moves, knowledge_base, colToCoordLis
     newMinesLen = len(newMines)
     safeMinesLen = len(safeList)
     defused, total = markMines(agent, newMines, moves)
-    markSafe(agent, board, safeList, moves, knowledge_base)
+    markSafe(agent, board, safeList, moves, knowledge_base, better_moves)
 
     if safeMinesLen > 0:
         return defused, total, True, True
@@ -763,41 +678,20 @@ def get_hidden_neighbors(agent, coord):
     return hidden
 
 '''
-This function is used to run trials and find the average success rate of the basic agent over 50 trials
+This function is used to run trials and find the average success rate of the better selection agent over 50 trials
 
 Input: dimension and density of the board
 Output: average success rate over 50 trials
 '''
-def run_basic_trials(dim, density):
+def run_better_select_trials(dim, density):
     average = 0
     for i in range(50):
         board, totalMines = generate_board(dim, density)
-        defused = basic_agent(board)
-        average += (defused / totalMines)
-    
-    return (average / 50)
-
-'''
-This function is used to run trials and find the average success rate of the advanced agent over 50 trials
-
-Input: dimension and density of the board
-Output: average success rate over 50 trials
-'''
-def run_advanced_trials(dim, density):
-    average = 0
-    for i in range(50):
-        board, totalMines = generate_board(dim, density)
-        defused = advanced_agent(board)
+        defused = better_selection(board, totalMines)
         average += (defused / totalMines)
 
     return (average / 50)
 
-
-'''
-This function is the main function
-'''
 if __name__ == '__main__':
-    basic_average = run_basic_trials(20, 0.9)
-    advanced_average = run_advanced_trials(20, 0.9)
-    print(basic_average)
-    print(advanced_average)
+    average = run_better_select_trials(20, 0.9)
+    print(average)
